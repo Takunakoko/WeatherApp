@@ -7,17 +7,16 @@
     tools:context="com.example.takunaka.weatherapp.ui.MainActivity">
 
 
-
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/secondBack">
+        android:background="@color/grayDark">
 
         <android.support.design.widget.AppBarLayout
+            android:id="@+id/appBarLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:theme="@style/AppTheme.AppBarOverlay"
-            android:id="@+id/appBarLayout">
+            android:theme="@style/AppTheme.AppBarOverlay">
 
             <android.support.v7.widget.Toolbar
                 android:id="@+id/toolbar"
@@ -27,24 +26,26 @@
                 app:popupTheme="@style/AppTheme.PopupOverlay" />
 
         </android.support.design.widget.AppBarLayout>
+
+
         <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="150dp"
             android:id="@+id/imgframe"
-            android:layout_below="@+id/appBarLayout"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true">
-        </FrameLayout>
-        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/main_header_selector"
-            android:layout_gravity="center_vertical|center_horizontal"
-            android:layout_below="@+id/appBarLayout"
+            android:layout_height="230dp"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:layout_marginTop="119dp"
-            android:id="@+id/fade_layout">
+            android:layout_below="@+id/appBarLayout"></FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/fade_layout"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_below="@+id/appBarLayout"
+            android:layout_gravity="center_vertical|center_horizontal"
+            android:layout_marginTop="180dp"
+            android:background="@drawable/main_header_selector">
 
             <TextView
                 android:id="@+id/city_name_text"
@@ -56,15 +57,14 @@
                 android:textColor="@color/white"
                 android:textSize="30sp" />
         </LinearLayout>
+
         <FrameLayout
+            android:id="@+id/weatherframe"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
-            android:layout_alignParentBottom="true"
+            android:layout_height="match_parent"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:id="@+id/weatherframe"
-            android:layout_below="@+id/fade_layout">
-        </FrameLayout>
+            android:layout_below="@+id/fade_layout"></FrameLayout>
 
 
     </RelativeLayout>

@@ -8,6 +8,7 @@ public class Cfg {
 
     private static Cfg instance;
 
+
     private Cfg(){
 
     }
@@ -19,12 +20,9 @@ public class Cfg {
     }
 
     private String forecastApiKey = "f6f1b3b3859fe2d221fb485da1b99798";
-    private String apiKey = "e0de28a8cb0fee81c2e98e66f2480232";
     private String units = "metric";
+    private String googlePlacesApiKey = "AIzaSyC0CZDjctE8xKKa-F_MiBpSsONDuSYVUDM";
 
-    public String getApiKey() {
-        return apiKey;
-    }
 
     public String getForecastApiKey(){
         return forecastApiKey;
@@ -32,5 +30,9 @@ public class Cfg {
 
     public String getUnits() {
         return units;
+    }
+
+    public String getGooglePlacesApiKey() {
+        return googlePlacesApiKey;
     }
 }

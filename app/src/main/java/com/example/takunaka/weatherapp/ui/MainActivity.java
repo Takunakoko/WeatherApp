@@ -2,6 +2,7 @@ package com.example.takunaka.weatherapp.ui;
 
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.ContextThemeWrapper;
@@ -13,9 +14,20 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.example.takunaka.weatherapp.R;
+import com.example.takunaka.weatherapp.api.GoogleApi;
+import com.example.takunaka.weatherapp.api.GoogleClient;
+import com.example.takunaka.weatherapp.util.Cfg;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.places.GeoDataApi;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.PlacePhotoMetadata;
+import com.google.android.gms.location.places.Places;
+
+import io.reactivex.disposables.Disposable;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -24,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout layout;
     private DataFragment dataFragment;
     private ImageFragment imageFragment;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +56,9 @@ public class MainActivity extends AppCompatActivity {
         layout.startAnimation(AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.fade_in));
         layout.getAnimation().setStartOffset(500);
 
+
+
+
         dataFragment = new DataFragment();
         imageFragment = new ImageFragment();
 
@@ -53,8 +69,6 @@ public class MainActivity extends AppCompatActivity {
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.weatherframe, dataFragment)
                 .commit();
-
-
 
     }
 
@@ -105,10 +119,12 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
 
-                        //cityName.getAnimation().setStartOffset(1000);
                     }
                 });
         AlertDialog alert = builder.create();
         alert.show();
     }
+
+
+
 }

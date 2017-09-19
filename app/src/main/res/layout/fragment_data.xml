@@ -4,6 +4,7 @@
     android:layout_height="match_parent"
     tools:context="com.example.takunaka.weatherapp.ui.DataFragment">
 
+
     <android.support.v4.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -239,35 +240,18 @@
 
             </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/secondBack"
-                android:gravity="center_horizontal"
-                android:paddingTop="16dp">
-
-                <TextView
-                    android:id="@+id/sunrise"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableTop="@drawable/ic_sunrise"
-                    android:paddingRight="32dp"
-                    android:text="Sunrise"
-                    android:textColor="@color/colorAccent"
-                    android:textSize="20sp" />
-
-                <TextView
-                    android:id="@+id/sunset"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableTop="@drawable/ic_sunset"
-                    android:paddingLeft="32dp"
-                    android:text="Sunset"
-                    android:textColor="@color/colorAccent"
-                    android:textSize="20sp" />
-            </LinearLayout>
-
 
         </LinearLayout>
     </android.support.v4.widget.NestedScrollView>
+    <RelativeLayout
+        android:id="@+id/loading_frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal|center_vertical"
+        android:background="@color/loading"
+        android:visibility="invisible">
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </RelativeLayout>
 </FrameLayout>

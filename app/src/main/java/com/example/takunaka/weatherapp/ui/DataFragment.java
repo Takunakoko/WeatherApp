@@ -7,25 +7,32 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.example.takunaka.weatherapp.dto.forecastDto.Items;
-import com.example.takunaka.weatherapp.util.Cfg;
 import com.example.takunaka.weatherapp.R;
 import com.example.takunaka.weatherapp.api.WeatherApi;
 import com.example.takunaka.weatherapp.api.WeatherClient;
 import com.example.takunaka.weatherapp.dto.forecastDto.Forecast;
+import com.example.takunaka.weatherapp.dto.forecastDto.Items;
+import com.example.takunaka.weatherapp.dto.weatherDto.CurrentWeather;
+import com.example.takunaka.weatherapp.dto.weatherDto.Main;
+import com.example.takunaka.weatherapp.dto.weatherDto.Weather;
+import com.example.takunaka.weatherapp.dto.weatherDto.Wind;
+import com.example.takunaka.weatherapp.util.Cfg;
 
 import java.util.Date;
 import java.util.List;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 
 
 public class DataFragment extends Fragment {
     private View rootView;
     private Cfg cfg = Cfg.getInstance();
+    private RelativeLayout rl;
 
     private ImageView image;
     private TextView temp;
@@ -33,8 +40,6 @@ public class DataFragment extends Fragment {
     private TextView maxTemp;
     private TextView pressure;
     private TextView wind;
-    private TextView sunrise;
-    private TextView sunset;
     private TextView day1;
     private TextView day2;
     private TextView day3;
@@ -42,6 +47,10 @@ public class DataFragment extends Fragment {
     private TextView day5;
     private TextView day6;
     private TextView day7;
+
+    private String city;
+    private WeatherApi api;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -54,26 +63,46 @@ public class DataFragment extends Fragment {
                              Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.fragment_data, container, false);
         initViews();
+        api = WeatherClient.getApi();
 
-
-        WeatherApi fApi = WeatherClient.getApi();
-
-        fApi.getForecast("Moscow", cfg.getUnits(), cfg.getForecastApiKey())
-                .map(Forecast::getList)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(this::callForecast);
-
+        if(savedInstanceState!=null){
+            updateData(city);
+        }
         return rootView;
     }
 
-    public void callWeather(List<Items> items){
+
+    public void setMain(Main main){
+        temp.setText(String.valueOf((int)main.getTemp() + "°C"));
+        pressure.setText(String.valueOf((int)(main.getPressure() * 0.75006375541921) + "mm"));
+        maxTemp.setText(String.valueOf((int)main.getTempMax() + "°C"));
+        minTemp.setText(String.valueOf((int)main.getTempMin() + "°C"));
+    }
+
+    public void setWind(Wind w){
+        wind.setText(String.valueOf((int)w.getSpeed() + "m/s"));
+    }
+
+    public void setPic(List<Weather> list){
+        image.setBackgroundResource(returnImg(list.get(0).getMain()));
 
     }
 
     public void callForecast(List<Items> items){
-
-        items.get(0).
+        forecastDayTemp(day1, items.get(0).getDt(), items.get(0).getTemp().getMax()
+                , items.get(0).getWeather().get(0).getMain());
+        forecastDayTemp(day2, items.get(1).getDt(), items.get(1).getTemp().getMax()
+                , items.get(1).getWeather().get(0).getMain());
+        forecastDayTemp(day3, items.get(2).getDt(), items.get(2).getTemp().getMax()
+                , items.get(2).getWeather().get(0).getMain());
+        forecastDayTemp(day4, items.get(3).getDt(), items.get(3).getTemp().getMax()
+                , items.get(3).getWeather().get(0).getMain());
+        forecastDayTemp(day5, items.get(4).getDt(), items.get(4).getTemp().getMax()
+                , items.get(4).getWeather().get(0).getMain());
+        forecastDayTemp(day6, items.get(5).getDt(), items.get(5).getTemp().getMax()
+                , items.get(5).getWeather().get(0).getMain());
+        forecastDayTemp(day7, items.get(6).getDt(), items.get(6).getTemp().getMax()
+                , items.get(6).getWeather().get(0).getMain());
     }
 
     public int returnImg(String description){
@@ -106,26 +135,57 @@ public class DataFragment extends Fragment {
         maxTemp = (TextView) rootView.findViewById(R.id.max_temp);
         pressure = (TextView) rootView.findViewById(R.id.pressure);
         wind = (TextView) rootView.findViewById(R.id.wind);
-        sunrise = (TextView) rootView.findViewById(R.id.sunrise);
-        sunset = (TextView) rootView.findViewById(R.id.sunset);
+        rl = (RelativeLayout) rootView.findViewById(R.id.loading_frame);
     }
 
     public void updateData(String city){
-        callWeather(city);
-        callForecast(city);
+        this.city = city;
+        api.getForecast(city, cfg.getUnits(), cfg.getForecastApiKey())
+                .map(Forecast::getList)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnSubscribe(this::showLoad)
+                .doAfterTerminate(this::hideLoad)
+                .subscribe(this::callForecast);
+
+        api.getWeather(city, cfg.getUnits(), cfg.getForecastApiKey())
+                .map(CurrentWeather::getMain)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnSubscribe(this::showLoad)
+                .doAfterTerminate(this::hideLoad)
+                .subscribe(this::setMain);
+
+        api.getWeather(city, cfg.getUnits(), cfg.getForecastApiKey())
+                .map(CurrentWeather::getWind)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnSubscribe(this::showLoad)
+                .doAfterTerminate(this::hideLoad)
+                .subscribe(this::setWind);
+
+        api.getWeather(city, cfg.getUnits(), cfg.getForecastApiKey())
+                .map(CurrentWeather::getWeather)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnSubscribe(this::showLoad)
+                .doAfterTerminate(this::hideLoad)
+                .subscribe(this::setPic);
     }
 
-    public String formattedDate (Long dateNum){
-        Date date = new Date(dateNum*1000);
-        String[] dateArray = date.toString().split(" ");
-        return dateArray[3];
-    }
-
-    public String forecastDayTemp(Long dateTime, double temp){
+    public void forecastDayTemp(TextView tw, int dateTime, double temp, String desc){
+        tw.setCompoundDrawablesWithIntrinsicBounds(0, returnImg(desc), 0, 0);
         Date date = new Date(dateTime*1000);
         String[] dateArray = date.toString().split(" ");
-        return new String((int) temp + "°С" + "\n" + dateArray[0]);
+        tw.setText(String.valueOf((int) temp + "°С" + "\n" + dateArray[0]));
     }
 
+    public void showLoad(Disposable disposable){
+        rl.setVisibility(View.VISIBLE);
+    }
+
+    public void hideLoad(){
+        rl.setVisibility(View.GONE);
+    }
 
 }
