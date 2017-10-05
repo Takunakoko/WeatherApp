@@ -18,7 +18,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".view.MainView"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
@@ -30,10 +30,9 @@
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
-
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
-            android:value="AIzaSyC0CZDjctE8xKKa-F_MiBpSsONDuSYVUDM" />
+            android:value="AIzaSyA8y21BP_dFeb2pVFoLx1629mwGbIA7wFI" />
     </application>
 
 </manifest>

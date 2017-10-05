@@ -1,5 +1,5 @@
 
-package com.example.takunaka.weatherapp.dto.weatherDto;
+package com.example.takunaka.weatherapp.model.dto.weatherDto;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
