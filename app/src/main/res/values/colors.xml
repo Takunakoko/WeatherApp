@@ -8,4 +8,5 @@
     <color name="secondBack">#1e1e1e</color>
     <color name="grayDark">#1e1e1e</color>
     <color name="loading">#e5000000</color>
+    <color name="progress">#d7000000</color>
 </resources>

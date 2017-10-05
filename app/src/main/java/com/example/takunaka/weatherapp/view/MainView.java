@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.example.takunaka.weatherapp.R;
@@ -18,8 +19,12 @@ public class MainView extends AppCompatActivity {
     public EditText cityDialog;
     public TextView cityName;
     public LinearLayout layout;
-    public LinearLayout progress;
-    private MainPresenter mainPresenter = new MainPresenter(this);
+    public ProgressBar progress;
+    public LinearLayout progressBarLayout;
+    private DataFragment dataFragment = new DataFragment();
+    private ImageFragment imageFragment = new ImageFragment();
+    private MainPresenter mainPresenter = new MainPresenter(this, dataFragment, imageFragment);
+
 
 
     @Override
@@ -27,32 +32,24 @@ public class MainView extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
+        setSupportActionBar(toolbar);
         getSupportActionBar().setTitle(null);
         getSupportActionBar().setSubtitle(null);
 
         cityName = (TextView) findViewById(R.id.city_name_text);
         layout = (LinearLayout) findViewById(R.id.fade_layout);
-        progress = (LinearLayout) findViewById(R.id.progress_layout);
+        progress = (ProgressBar) findViewById(R.id.loading);
+        progressBarLayout = (LinearLayout) findViewById(R.id.progressBar_layout);
 
 
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.weatherframe, dataFragment)
+                .commit();
 
-
-
-
-
-
-
-
-        if (savedInstanceState == null){
-            mainPresenter.showSearchDialog();
-            mainPresenter.initFragments();
-        } else {
-            mainPresenter.loadCity();
-            mainPresenter.initFragments();
-        }
-
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.imgframe, imageFragment)
+                .commit();
 
     }
 
@@ -71,16 +68,5 @@ public class MainView extends AppCompatActivity {
         }
         return super.onOptionsItemSelected(item);
     }
-
-    public void showLoading(){
-        progress.setVisibility(View.VISIBLE);
-    }
-
-    public void hideLoading(){
-        progress.setVisibility(View.INVISIBLE);
-    }
-
-
-
 
 }

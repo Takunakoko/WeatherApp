@@ -10,13 +10,10 @@ import android.widget.ImageView;
 
 import com.example.takunaka.weatherapp.R;
 
-import java.io.IOException;
-import java.net.URL;
 
 
 public class ImageFragment extends Fragment {
 
-    private final ImagePresenter imagePresenter = new ImagePresenter(this);
     public ImageView img;
 
     @Override
@@ -31,7 +28,6 @@ public class ImageFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_image, container, false);
         img = (ImageView) rootView.findViewById(R.id.img_view);
 
-        imagePresenter.loadImage();
 
 
         return rootView;

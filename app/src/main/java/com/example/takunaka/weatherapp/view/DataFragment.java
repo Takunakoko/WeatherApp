@@ -14,7 +14,6 @@ import com.example.takunaka.weatherapp.R;
 
 public class DataFragment extends Fragment {
     private View rootView;
-    private final DataPresenter dataPresenter = new DataPresenter(this);
 
     public ImageView image;
     public TextView temp;
@@ -56,7 +55,6 @@ public class DataFragment extends Fragment {
                              Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.fragment_data, container, false);
         initViews();
-        dataPresenter.loadData("Moscow");
         return rootView;
     }
 
