@@ -1,6 +1,8 @@
 
 package com.example.takunaka.weatherapp.model.dto.weatherDto;
 
+import android.support.annotation.Nullable;
+
 import java.util.List;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -10,6 +12,7 @@ public class CurrentWeather {
     @SerializedName("coord")
     @Expose
     private Coord coord;
+    @Nullable
     @SerializedName("weather")
     @Expose
     private List<Weather> weather = null;
@@ -52,6 +55,7 @@ public class CurrentWeather {
         this.coord = coord;
     }
 
+    @Nullable
     public List<Weather> getWeather() {
         return weather;
     }

@@ -1,6 +1,8 @@
 
 package com.example.takunaka.weatherapp.model.dto.forecastDto;
 
+import android.support.annotation.Nullable;
+
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
@@ -20,6 +22,7 @@ public class Forecast {
     @SerializedName("cnt")
     @Expose
     private int cnt;
+    @Nullable
     @SerializedName("list")
     @Expose
     private List<Items> list = null;
@@ -56,6 +59,7 @@ public class Forecast {
         this.cnt = cnt;
     }
 
+    @Nullable
     public List<Items> getList() {
         return list;
     }

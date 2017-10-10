@@ -4,8 +4,6 @@
     android:layout_height="match_parent"
     tools:context="com.example.takunaka.weatherapp.view.ImageFragment">
 
-    <!-- TODO: Update blank fragment layout -->
-
         <ImageView
             android:id="@+id/img_view"
             android:scaleType="centerCrop"
