@@ -1,9 +1,9 @@
 package com.example.takunaka.weatherapp.view;
 
+import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
@@ -18,26 +18,25 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.takunaka.weatherapp.R;
+import com.example.takunaka.weatherapp.model.dto.Data;
 import com.example.takunaka.weatherapp.model.dto.api.GoogleClient;
 import com.example.takunaka.weatherapp.model.dto.api.WeatherClient;
-import com.example.takunaka.weatherapp.model.dto.forecastDto.Forecast;
 import com.example.takunaka.weatherapp.model.dto.forecastDto.Items;
-import com.example.takunaka.weatherapp.model.dto.googleDto.GoogleResponse;
 import com.example.takunaka.weatherapp.model.dto.googleDto.Photo;
 import com.example.takunaka.weatherapp.model.dto.googleDto.Result;
 import com.example.takunaka.weatherapp.model.dto.weatherDto.CurrentWeather;
-import com.example.takunaka.weatherapp.model.dto.weatherDto.Main;
-import com.example.takunaka.weatherapp.model.dto.weatherDto.Weather;
-import com.example.takunaka.weatherapp.model.dto.weatherDto.Wind;
 import com.example.takunaka.weatherapp.util.Config;
+import com.google.gson.Gson;
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.NetworkPolicy;
+import com.squareup.picasso.Picasso;
 
-import java.io.IOException;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
@@ -55,12 +54,16 @@ class MainPresenter {
     //константа сохраненного города
     @NonNull
     private final String SAVED_CITY = "saved_city";
+    private final String SAVED_DATA = "data";
+
     //название города
     @Nullable
     private String city;
+    private Data data;
+    private String url;
+
     //Формат даты для отображения только дня недели
     private static final SimpleDateFormat sdf = new SimpleDateFormat("EEEE", Locale.US);
-
 
     MainPresenter(@NonNull MainView mainView, @NonNull DataFragment dataFragment, @NonNull ImageFragment imageFragment) {
         this.mainView = mainView;
@@ -84,9 +87,7 @@ class MainPresenter {
                     city = mainView.cityDialog.getText().toString();
                     //запускаем анимацию
                     setCityName();
-                    //запускаем запрос к GoogleApi
-                    getPhotoReference();
-                    //запрос к WeatherApi
+                    //запрос к Api
                     loadData();
                 })
                 .setNegativeButton(R.string.abort, (dialog, which) -> dialog.cancel());
@@ -96,41 +97,37 @@ class MainPresenter {
     }
 
     /**
-     * метод получения ID изображения из API гугла
-     */
-    private void getPhotoReference() {
-        //показ прогресс-бара
-        showLoad();
-        //запрос в гугл для получения идентификатора
-        GoogleClient.getApi().getID(city, Config.GOOGLE_PLACES_API_KEY)
-                //преобразование результатов
-                .map(GoogleResponse::getResults)
-                //создание нового потока
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                //если данные получены - вызываем метод getPlaceID , если нет - показываем ошибку
-                .subscribe(this::getPlaceID, this::showError);
-    }
-
-    /**
      * Метод получения из ответа гугла фотореференс
      * Запуск asyncTask для получения фотографии из ссылки
      *
      * @param list лист с преобразованными ответами от гугла
      */
-    private void getPlaceID(@NonNull List<Result> list) {
-        String photoReference = null;
-        //присваивание референса в временную переменную
+    private void setImageFromApi(@NonNull List<Result> list) {
         List<Photo> photos = list.get(0).getPhotos();
         if (photos != null) {
-            photoReference = photos.get(0).getPhotoReference();
+            url = Config.GOOGLE_URL + Config.GOOGLE_PIC + Config.MAXWIDTH
+                    + "&photoreference=" + photos.get(0).getPhotoReference() + "&key=" + Config.GOOGLE_PLACES_API_KEY;
         }
+        //присваивание изображения с помощью библиотеки Picasso
+        Picasso.with(imageFragment.getContext())
+                .load(url)
+                .networkPolicy(NetworkPolicy.OFFLINE)
+                .into(imageFragment.img, new Callback() {
+                    @Override
+                    public void onSuccess() {
+                    }
 
-        //Создание новой асинхронной задачи с преобразованием изображения в bitmap
-        PhotoTask pt = new PhotoTask(photoReference, imageFragment, this);
-        //старт задачи
-        pt.execute();
+                    @Override
+                    public void onError() {
+                        Picasso.with(imageFragment.getContext())
+                                .load(url)
+                                .into(imageFragment.img);
+                    }
+                });
+        //скрытие загрузки
+        hideLoad();
     }
+
 
     /**
      * показ ошибки в случае, если один из запросов не прошел
@@ -147,49 +144,42 @@ class MainPresenter {
     }
 
     /**
-     * проверка состояния SharedPreferences
-     */
-    void checkState() {
-        //если содержат константу SAVED_CITY
-        if (mainView.sPref.contains(SAVED_CITY)) {
-            //загружать последний город
-            loadCity();
-        }
-    }
-
-    /**
-     * Метод обращения к OpenWeatherAPI
+     * Метод обращения к API
      */
     private void loadData() {
         //Показ прогресс-бара
         showLoad();
-        // обращение к API для получения листа с данными на неделю
-        WeatherClient.getApi().getForecast(city, Config.UNITS, Config.FORECAST_API_KEY)
-                .map(Forecast::getList)
+        //RX запрос к 3 API и сборка их в объект класса Data для дальнейшей работы
+        Observable.combineLatest(WeatherClient.getApi()
+                        .getForecast(city, Config.UNITS, Config.FORECAST_API_KEY),
+                WeatherClient.getApi().getWeather(city, Config.UNITS, Config.FORECAST_API_KEY),
+                GoogleClient.getApi().getID(city, Config.GOOGLE_PLACES_API_KEY),
+                (forecast, current, google) -> {
+                    data = new Data(current, forecast, google);
+                    return data;
+                })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(this::callForecast, this::showError);
+                .subscribe(this::getData, this::showError);
+    }
 
-        //обращение к API для получения температуры на сегодня
-        WeatherClient.getApi().getWeather(city, Config.UNITS, Config.FORECAST_API_KEY)
-                .map(CurrentWeather::getMain)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(this::setMain, this::showError);
 
-        //обращение к API для получения ветра на сегодня
-        WeatherClient.getApi().getWeather(city, Config.UNITS, Config.FORECAST_API_KEY)
-                .map(CurrentWeather::getWind)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(this::setWind, this::showError);
-
-        //обращение к API для получения погоды на сегодня
-        WeatherClient.getApi().getWeather(city, Config.UNITS, Config.FORECAST_API_KEY)
-                .map(CurrentWeather::getWeather)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(this::setPic, this::showError);
+    private void getData(Data data) {
+        //сохранение полученного бекапа с данными
+        saveBackup();
+        //раскидывание полученных данных по разным методам
+        if (data.getGoogleResponse().getResults() != null) {
+            //передача ответа гугла в метод setImageFromApi
+            setImageFromApi(data.getGoogleResponse().getResults());
+        }
+        if (data.getForecast().getList() != null) {
+            //передача подкаста в метод weekForecast
+            weekForecast(data.getForecast().getList());
+        }
+        if (data.getCurrentWeather() != null) {
+            //передача данных о погоде сегодня из ответа в метод setMainData
+            setMainData(data.getCurrentWeather());
+        }
     }
 
     /**
@@ -219,14 +209,14 @@ class MainPresenter {
     }
 
     /**
-     * @param day TextView дня
-     * @param dayTemp TextView температуры
-     * @param dayIcon ImageView для погоды на этот день
+     * @param day      TextView дня
+     * @param dayTemp  TextView температуры
+     * @param dayIcon  ImageView для погоды на этот день
      * @param dateTime Дата из ответа в unix формате
-     * @param temp температура из ответа
-     * @param desc описание из ответа (для отправки в метод returnImg)
+     * @param temp     температура из ответа
+     * @param desc     описание из ответа (для отправки в метод returnImg)
      */
-    private void forecastDayTemp(@NonNull TextView day, @NonNull TextView dayTemp, @NonNull ImageView dayIcon, @NonNull int dateTime, @NonNull double temp, @NonNull String desc) {
+    private void forecastDayTemp(@NonNull TextView day, @NonNull TextView dayTemp, @NonNull ImageView dayIcon, int dateTime, double temp, @NonNull String desc) {
         //установка иконки погоды
         dayIcon.setBackgroundResource(returnImg(desc));
         //установка даты с преобразованием через SDF
@@ -236,39 +226,28 @@ class MainPresenter {
     }
 
     /**
-     * Метод установки базовых параметров сегодняшней погоды
+     * метод установки
+     * иконки погоды
+     * температуры и основных данных
+     * по сегодняшнему дню
      *
-     * @param main объект из ответа API
+     * @param currentWeather класс приходящий в ответ от API
      */
-    private void setMain(@NonNull Main main) {
+    private void setMainData(@NonNull CurrentWeather currentWeather) {
         //установка температуры
-        mainView.tempText.setText(String.valueOf((int) main.getTemp() + "°C"));
+        mainView.tempText.setText(String.valueOf((int) currentWeather.getMain().getTemp() + "°C"));
         //установка давления
-        dataFragment.pressure.setText(String.valueOf((int) (main.getPressure() * 0.75006375541921) + "mm"));
+        dataFragment.pressure.setText(String.valueOf((int) (currentWeather.getMain().getPressure() * 0.75006375541921) + "mm"));
         //минимум температуры
-        dataFragment.maxTemp.setText(String.valueOf((int) main.getTempMax() + "°C"));
+        dataFragment.maxTemp.setText(String.valueOf((int) currentWeather.getMain().getTempMax() + "°C"));
         //максимум температуры
-        dataFragment.minTemp.setText(String.valueOf((int) main.getTempMin() + "°C"));
-    }
-
-    /**
-     * Метод установки ветренности
-     *
-     * @param w объект API
-     */
-    private void setWind(@NonNull Wind w) {
+        dataFragment.minTemp.setText(String.valueOf((int) currentWeather.getMain().getTempMin() + "°C"));
         //установка данных по ветру
-        dataFragment.wind.setText(String.valueOf((int) w.getSpeed() + "m/s"));
-    }
-
-    /**
-     * метод установки центральной иконки погоды
-     *
-     * @param list лист приходящий из ответа API
-     */
-    private void setPic(@NonNull List<Weather> list) {
+        dataFragment.wind.setText(String.valueOf((int) currentWeather.getWind().getSpeed() + "m/s"));
         //установка картинки с использованием метода returnImg
-        mainView.weather_icon.setBackgroundResource(returnImg(list.get(0).getMain()));
+        if (currentWeather.getWeather() != null) {
+            mainView.weather_icon.setBackgroundResource(returnImg(currentWeather.getWeather().get(0).getMain()));
+        }
     }
 
     /**
@@ -276,7 +255,7 @@ class MainPresenter {
      *
      * @param items входящий лист с объектами API
      */
-    private void callForecast(@NonNull List<Items> items) {
+    private void weekForecast(@NonNull List<Items> items) {
         //с помощью метода forecastDayTemp устанавливаем погоду, дату и картинку
         List<com.example.takunaka.weatherapp.model.dto.forecastDto.Weather> weather = items.get(0).getWeather();
         if (weather != null) {
@@ -294,12 +273,14 @@ class MainPresenter {
                     items.get(5).getDt(), items.get(5).getTemp().getMax(), weather.get(0).getMain());
             forecastDayTemp(dataFragment.day7, dataFragment.day7_temp, dataFragment.day7_img,
                     items.get(6).getDt(), items.get(6).getTemp().getMax(), weather.get(0).getMain());
+
         }
     }
 
     /**
      * метод подбора картинки
      * на основании входящего из api описания подбирает нужную картинку
+     *
      * @param description описание
      * @return возвращает id картинки
      */
@@ -322,6 +303,17 @@ class MainPresenter {
     }
 
     /**
+     * проверка подключения к интернету
+     *
+     * @return возвращает true если подключения к интернету нет
+     */
+    boolean checkInternetConnection() {
+        ConnectivityManager conMgr = (ConnectivityManager) mainView.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = conMgr.getActiveNetworkInfo();
+        return netInfo == null;
+    }
+
+    /**
      * Показ прогресс-бара
      */
     private void showLoad() {
@@ -334,7 +326,7 @@ class MainPresenter {
     /**
      * Скрытие прогресс-бара
      */
-    void hideLoad() {
+    private void hideLoad() {
         //установка видимости layout
         mainView.progress.setVisibility(View.INVISIBLE);
         //установка видимости прогресс-бара
@@ -342,71 +334,70 @@ class MainPresenter {
     }
 
     /**
+     * Загрузка данных по последнему городу
+     */
+    void initData() {
+        loadCity();
+        loadData();
+    }
+
+    /**
      * Сохранение города при закрытии приложения
      */
-    void saveCity() {
+    private void saveBackup() {
         //создание контейнера для хранения
         SharedPreferences.Editor ed = mainView.sPref.edit();
         //помещение пользователя в хранилище
         ed.putString(SAVED_CITY, city);
+        //сериализация класса Data для сохранения в SP
+        ed.putString(SAVED_DATA, new Gson().toJson(data));
         ed.apply();
     }
 
     /**
      * Загрузка города из сохраненного SharedPreferences
      */
-    private void loadCity() {
+
+    void loadCity() {
         //установка сохраненного города в переменную
         city = mainView.sPref.getString(SAVED_CITY, "");
         //запуск анимации
         setCityName();
-        //получение изображения
-        getPhotoReference();
-        //получение данных погоды
-        loadData();
     }
 
-}
-
-/**
- * Асинхронная задача по получению фотографии
- */
-class PhotoTask extends AsyncTask<String, Void, Bitmap> {
-
-    private final String photoReference;
-    private final ImageFragment imageFragment;
-    private final MainPresenter mainPresenter;
-
-    PhotoTask(String photoRef, ImageFragment imageFragment, MainPresenter mainPresenter) {
-        this.photoReference = photoRef;
-        this.imageFragment = imageFragment;
-        this.mainPresenter = mainPresenter;
-    }
-
-    @Nullable
-    @Override
-    protected Bitmap doInBackground(String... params) {
-        //Инициализация битмапа
-        Bitmap image = null;
-        //Создание урла фотографии
-        String photoUrl = Config.GOOGLE_URL + Config.GOOGLE_PIC + Config.MAXWIDTH
-                + "&photoreference=" + photoReference + "&key=" + Config.GOOGLE_PLACES_API_KEY;
-        try {
-            //преобразование изображения из ссылки в Bitmap
-            image = BitmapFactory.decodeStream(new URL(photoUrl).openConnection().getInputStream());
-        } catch (IOException e) {
-            e.printStackTrace();
+    /**
+     * Метод загрузки последних кэшированных данных при отсутствии интернета
+     */
+    void loadBackup() {
+        //показ сообщения об отсутвтии интернета
+        new AlertDialog.Builder(mainView)
+                .setTitle(R.string.no_internet_conn)
+                .setPositiveButton(R.string.ok, null).show();
+        //получение данных из сериализованного класса Data
+        Data obj = new Gson().fromJson(mainView.sPref.getString(SAVED_DATA, ""), Data.class);
+        //проверка получен ли объект obj
+        if (obj != null) {
+            //раскидывание кешированных данных по методам
+            if (obj.getGoogleResponse().getResults() != null) {
+                setImageFromApi(obj.getGoogleResponse().getResults());
+            }
+            if (obj.getForecast().getList() != null) {
+                weekForecast(obj.getForecast().getList());
+            }
+            if (obj.getCurrentWeather() != null) {
+                setMainData(obj.getCurrentWeather());
+            }
         }
-        //возврат изображения
-        return image;
     }
 
-    @Override
-    protected void onPostExecute(Bitmap bitmap) {
-        //если задача прошла успешно ставим bitmap фрагменту изображения
-        imageFragment.img.setImageBitmap(bitmap);
-        //скрываем прогресс-бар
-        mainPresenter.hideLoad();
+    /**
+     * проверка на первый запуск приложения
+     *
+     * @return возвращает true если это первый запуск
+     */
+    boolean firstLoad() {
+        return mainView.sPref.contains(SAVED_CITY);
     }
 }
+
 

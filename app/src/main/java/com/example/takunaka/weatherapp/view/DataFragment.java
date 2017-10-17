@@ -86,4 +86,5 @@ public class DataFragment extends Fragment {
         //TextView для ветренности сегодня
         wind = (TextView) rootView.findViewById(R.id.wind);
     }
+
 }

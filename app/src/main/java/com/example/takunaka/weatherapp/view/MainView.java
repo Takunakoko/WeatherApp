@@ -41,7 +41,7 @@ public class MainView extends AppCompatActivity {
         setSupportActionBar(toolbar);
         ActionBar bar = getSupportActionBar();
         //проверка бара на null
-        if (bar != null){
+        if (bar != null) {
             //установка title и subtitle на null
             bar.setTitle(null);
             bar.setSubtitle(null);
@@ -58,7 +58,6 @@ public class MainView extends AppCompatActivity {
         tempText = (TextView) findViewById(R.id.temp_text);
         //иконка погоды в данный момент на плашке
         weather_icon = (ImageView) findViewById(R.id.current_weather_img);
-
         //старт фрагментов
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.weatherframe, dataFragment)
@@ -68,14 +67,25 @@ public class MainView extends AppCompatActivity {
                 .replace(R.id.imgframe, imageFragment)
                 .commit();
 
+
         //проверка savedInstanceState после восстановления состояния
-        if (savedInstanceState != null){
-            //если не нулевое - проверка констатны города в SharedPreferences
-            mainPresenter.checkState();
+        if (savedInstanceState != null) {
+            //если не нулевое - проверка интернет соединения
+            if (mainPresenter.checkInternetConnection()) {
+                //если соединения нет
+                if (dataFragment.day1_img != null) {
+                    //загружаем данные из кеша
+                    mainPresenter.loadCity();
+                    mainPresenter.loadBackup();
+                }
+            } else {
+                if (mainPresenter.firstLoad()) {
+                    //инициализируем последний город
+                    mainPresenter.initData();
+                }
+
+            }
         }
-
-
-
     }
 
     @Override
@@ -95,20 +105,22 @@ public class MainView extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        //сохранение города
-        mainPresenter.saveCity();
-    }
-
     @Override
     protected void onResume() {
+        //проверка интернет соединения
+        if (mainPresenter.checkInternetConnection()) {
+            //если соединения нет
+            if (dataFragment.day1_img != null) {
+                //загружаем данные из кеша
+                mainPresenter.loadCity();
+                mainPresenter.loadBackup();
+            }
+        } else {
+            if (mainPresenter.firstLoad()) {
+                //инициализируем последний город
+                mainPresenter.initData();
+            }
+        }
         super.onResume();
-        //проверка и восстановление города
-        mainPresenter.checkState();
     }
-
-
 }

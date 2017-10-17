@@ -9,5 +9,7 @@
     <string name="Pressure">Pressure</string>
     <string name="Wind">Wind</string>
     <string name="enter_city">Введите город</string>
+    <string name="ok">OK</string>
+    <string name="no_internet_conn">Нет подключения к интернету. Показаны последние доступные данные</string>
 
 </resources>
